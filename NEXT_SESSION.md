@@ -1,75 +1,64 @@
-# Next session: give Pliffo Financials a real UI/UX makeover
+# Next session: Pliffo Financials
 
 Paste this to start: **"Read NEXT_SESSION.md and follow it."**
 
-## What this is
+## Where things stand (2026-11-21)
 
-An internal expense tracker for Pliffo, a startup with two co-owners, Antoine and Kiryl. They pay company costs out of their own pockets for now. The app records:
-- money coming in,
-- what was paid, by whom, and for what,
-- the totals: overall and per person.
+Live at https://finances.pliffo.com. Code is on GitHub (`AntoineOparin/pliffo-finances`, branch `main`).
+It's an expense tracker for Pliffo's two co-owners, Antoine and Kiryl. Both use it on Mac and on their phones.
 
-Only those two people use it, on Mac (Safari/Chrome) and probably on their phones.
+The makeover is done and deployed:
+- React + shadcn frontend in `app/`, built by Vite into the Worker's assets
+- settle-up, editing, editable categories, receipts in R2, recurring-cost reminders, CSV export
+- light and dark mode, a phone layout, and a home-screen manifest
 
-It's live at https://finances.pliffo.com, with Google login limited to two emails. It works, but it looks like a plain HTML form. The owner says it "needs a makeover", and native `<select>` dropdowns look especially bad on macOS. The owner has **no fixed idea of what it should do or look like**. Researching that is part of the job.
+Read `README.md` for how it's built and deployed.
 
-## How it's built today (read these files first)
+## How the money works (agreed with the owner, don't change it without asking)
 
-- `src/index.ts`: the Worker. It handles Google login (`/login`, `/auth/callback`, `/logout`) and the JSON API: `GET/POST /api/entries`, `DELETE /api/entries/:id`.
-- `src/auth.ts`: Google login and the session cookie. `src/money.ts`: input validation and totals. Tests are in `src/*.test.ts`.
-- `public/index.html`: the whole frontend. Vanilla JS, inline CSS, no build step.
-- `migrations/`: the D1 schema. Table `entries`: `date`, `kind` (in/out), `amount_cents`, `who` (Antoine/Kiryl/Both), `what`, `added_by`.
-- `README.md`: deploy steps and secrets. It's on the Pliffo team Cloudflare account (pliffoteam@gmail.com).
-
-Commands: `bun run dev` (local, login skipped via `DEV_USER` in `.dev.vars`), `bun test`, `bun run typecheck`, `bun run deploy`.
-A schema change means a new numbered file in `migrations/`, applied with `bunx wrangler d1 migrations apply DB --remote`. Never edit `0001_init.sql`: it has already run in production.
+- All **expenses are split 50/50** between Antoine and Kiryl.
+- All **money coming in** (casino promo money, Pliffo's earnings, anything else) is **company money**, not personal. The `who` on an income entry means whoever is holding that money.
+- **Out of pocket** per person = paid for Pliffo − Pliffo money they hold + transfers sent − transfers received. That is what Pliffo owes them back once it has its own bank account.
+- **Settle up** = half the difference between their out-of-pocket amounts. Recording it adds a `transfer` entry. A leftover half-cent counts as settled.
+- The logic lives in `summarize()` in `src/money.ts` and is tested in `src/money.test.ts`.
+- The casino $185 was received by Antoine (corrected in production on 2026-11-21). With the current data, Antoine pays Kiryl $55.71.
 
 ## Do not break
 
-- **Login and access:** API routes return 401 without a valid session, and `ALLOWED_EMAILS` is re-checked on every request.
-- **CSRF protection:** POST requires `Content-Type: application/json`. Any new write route needs the same check.
-- **Validation on the server:** keep it in `money.ts`, whatever the UI checks.
-- **Money as integer cents:** never store or add floats.
-- **No `innerHTML` with entry text:** entries are user input. (A framework that escapes for you is fine.)
-- **The 5 existing entries in production.** Back up before any migration: `bunx wrangler d1 export pliffo-finances --remote --output backup.sql`.
-- **Free tier:** everything stays on Cloudflare's free plan (Workers, D1, and R2 if receipts are added).
+- Login: `/api/*` returns 401 without a session, and `ALLOWED_EMAILS` is re-checked on every request.
+- CSRF: JSON writes require `Content-Type: application/json`. Receipt PUT/DELETE rely on having no CORS. Any new write route needs the same protection.
+- Server-side validation stays in `money.ts`. Money is stored as integer cents. No `innerHTML` with entry text.
+- **$0 cost.** The owner does not want to pay anything. R2 is enabled with a payment method on file, so check free-tier limits before adding anything and tell the owner the worst-case cost.
+- Back up before any migration or production data change: `bunx wrangler d1 export pliffo-finances --remote --output backups/<name>.sql` (`backups/` is gitignored). Never edit an existing migration. Add a new numbered file.
+- Deploy and push only when the owner explicitly says so.
 
-## How to run this session
+## Leftovers
 
-1. **Research first.** Use web search, e.g. the `research` skill or a `web-search-agent`. Look at how good expense and shared-cost apps handle:
-   - adding an expense fast,
-   - "who owes whom",
-   - categories,
-   - receipts,
-   - showing the totals.
+### Owner to-dos (not code)
+- Add real dates to the 4 old expenses: Domain, Claude credits, Apple Developer and the mic. The upcoming-renewals panel needs them. The casino income has no date either.
+- Check for missing expenses. The owner said the casino money "was all spent and more", but Antoine's recorded expenses only add up to $150.73 of the $185.
+- Optional: set a Cloudflare billing alert (Notifications) as a safety net.
 
-   Good references: Splitwise and Tricount (settling up between two people), Ramp and Brex (startup expense UX, receipts), Lunch Money, Copilot Money and Actual Budget (clean personal finance UI, categories, charts), and Wave (small-business bookkeeping, exports for the accountant).
+### Not verified yet
+- Safari on Mac, and a real iPhone, including "Add to Home Screen". Only Chrome has been tested so far, both headless and real.
+- A real receipt upload in production. It was only tested locally, so the R2 bucket `pliffo-receipts` is still empty.
+- The 10 MB receipt limit with a file that large.
 
-   Bring back a short summary: which patterns are worth copying, with screenshots or links.
-2. **Agree on scope with the owner** before building. Use the `grill-me` (or `interview`) skill with the feature list below. The owner wants suggestions; don't build everything.
-3. **Pick a design direction.** Use `taste-skill` (design-taste-frontend) and `redesign-skill` (redesign-existing-projects) to review the current page and choose a direction. `minimalist-skill` suits a calm, finance-tool look. `apple-design` helps it feel at home on a Mac.
-4. **Decide the stack.** If scope stays small, keep the single HTML file. If it grows (edit dialogs, filters, charts, receipts), suggest moving the frontend to a Vite + React app served as Worker assets, keeping the same `/api`. The owner normally likes React Router + shadcn on Cloudflare. Ask before switching.
-5. **Build, then polish.** Use `better-ui` for spacing, radius, icons and states. Use `animate` only where motion helps. Use `dataviz` before drawing any chart.
-6. **Check it in a real browser.** Use the `run` and `claude-in-chrome` skills: light and dark mode, phone width, keyboard-only, Safari quirks. Then run `bun test` and `bun run typecheck`, and deploy only when the owner says so.
+### Features skipped on purpose (offer these, don't build without asking)
+1. **Spending over time:** monthly totals or a running balance. Load the `dataviz` skill first.
+2. **Filters and search** by person, category and month.
+3. **Original currency:** the USD amount next to the CAD one. Amounts are CAD only for now.
+4. **Company reimbursements:** once Pliffo has a bank account, a "Pliffo paid X back" transfer.
+5. **Auto-created renewals:** a cron that adds recurring charges. Right now they're reminders only, and the owner chose that.
+6. **Receipts ZIP for the accountant.** Today the CSV links to receipts, but the links need a login.
 
-## UI problems already known
+### Small known nits
+- The JS bundle is about 157 KB gzipped, so Vite warns about chunk size. That's fine at this size. Code-split only if it grows.
+- Headless Chrome shows emoji in black and white. Real browsers show them in colour, so it's a test artefact.
+- The big balance number stays black even when it's negative. Only expense rows are red, which is what the owner asked for.
 
-- Type (In/Out) and Who (Antoine/Kiryl/Both) use native `<select>`s. With only 2–3 options, **segmented buttons** are better and look the same on every OS.
-- The date picker and amount field are browser defaults. There's no currency shown. The amounts look like **CAD** (Apple Developer: 119 + Quebec tax = 136.83); confirm with the owner.
-- The summary cards are crowded, and "Antoine: in 92.50 · paid" is hard to read.
-- No edit (only delete, which pops a browser `confirm()`), no empty or loading states, no success feedback.
-- The 5 seed entries have no dates and show "—".
+## Commands
 
-## Feature ideas to offer the owner (rough priority, short notes)
-
-1. **Settle-up view:** "Kiryl owes Antoine X" (or the company owes each of them), plus a "mark reimbursed" action for when the company gets its own bank account. This is the main reason the app exists.
-2. **Edit an entry**, including adding dates to the old ones.
-3. **Categories:** software and subscriptions, hardware, domains, legal and fees, marketing. Show a breakdown, e.g. a bar list.
-4. **Fast mobile add:** a big amount field first, then smart defaults (today, the signed-in person, the last category used). Can be added to the phone's home screen like an app (a PWA, via a small manifest).
-5. **Receipts:** attach a photo or PDF, stored in R2 (free up to 10 GB). Useful for taxes and pre-incorporation expenses.
-6. **Recurring costs:** Apple Developer yearly, the domain yearly, Claude credits monthly. Show upcoming renewals and monthly burn.
-7. **Spending over time:** monthly totals or a running balance.
-8. **Filters and search** by person, category and month. **CSV export** for an accountant.
-9. **Original currency** for charges made in USD, alongside the amount in CAD.
-
-Suggested first slice if the owner can't decide: segmented controls plus a visual refresh, edit, settle-up, and categories. Then receipts and recurring costs.
+`bun run dev` runs it locally at http://localhost:8787 and skips login via `DEV_USER` in `.dev.vars`.
+The other commands are `bun test`, `bun run typecheck` and `bun run deploy`. Deploy builds the app, applies migrations, then deploys.
+To screenshot or click through the app, use Claude in Chrome. If the extension isn't connected, use puppeteer-core against the installed Chrome from a scratchpad folder.
