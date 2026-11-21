@@ -178,7 +178,9 @@ function Balance({ data, onSettle }: { data: Data; onSettle: () => void }) {
   return (
     <section className={cn(card, "p-5 sm:p-6")} aria-label="Balance">
       <p className="text-sm text-muted-foreground">Pliffo balance</p>
-      <p className="num mt-1 text-4xl font-semibold tracking-tight">{money(net)}</p>
+      <p className={cn("num mt-1 text-4xl font-semibold tracking-tight", net < 0 && "text-negative", net > 0 && "text-positive")}>
+        {money(net)}
+      </p>
       <p className="num mt-1 text-sm text-muted-foreground">
         {money(data.summary.in)} received − {money(data.summary.out)} spent
       </p>

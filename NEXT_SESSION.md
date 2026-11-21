@@ -55,7 +55,6 @@ Read `README.md` for how it's built and deployed.
 ### Small known nits
 - The JS bundle is about 157 KB gzipped, so Vite warns about chunk size. That's fine at this size. Code-split only if it grows.
 - Headless Chrome shows emoji in black and white. Real browsers show them in colour, so it's a test artefact.
-- The big balance number stays black even when it's negative. Only expense rows are red, which is what the owner asked for.
 
 ## Commands
 
