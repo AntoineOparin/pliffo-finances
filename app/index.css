@@ -23,6 +23,7 @@
   --input: #dad9d4;
   --ring: #0a7aff;
   --positive: #1d7f37;
+  --negative: #d70015;
   --bar: #b9b7b0;
 }
 
@@ -48,6 +49,7 @@
     --input: #46443f;
     --ring: #0a84ff;
     --positive: #4cd667;
+    --negative: #ff6961;
     --bar: #5c5a55;
   }
 }
@@ -73,6 +75,7 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-positive: var(--positive);
+  --color-negative: var(--negative);
   --color-bar: var(--bar);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

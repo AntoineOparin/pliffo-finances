@@ -171,52 +171,73 @@ export function App() {
 }
 
 function Balance({ data, onSettle }: { data: Data; onSettle: () => void }) {
-  const { settle, per } = data.summary;
+  const { settle, per, net } = data.summary;
+  const share = -net / 2; // what each of you should be out of pocket once even
+  const th = "pb-2 pl-3 text-right align-bottom text-xs leading-tight font-normal text-muted-foreground";
+  const td = "num py-1.5 pl-3 text-right";
   return (
     <section className={cn(card, "p-5 sm:p-6")} aria-label="Balance">
-      {settle ? (
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-sm text-muted-foreground">
-              {settle.from} owes {settle.to}
-            </p>
-            <p className="num mt-1 text-4xl font-semibold tracking-tight">{money(settle.cents)}</p>
-          </div>
-          <Button onClick={onSettle}>Settle up</Button>
-        </div>
-      ) : (
-        <div className="flex items-center gap-3">
-          <CheckCircle2 className="size-8 text-positive" />
-          <div>
-            <p className="text-lg font-semibold tracking-tight">All settled up</p>
-            <p className="text-sm text-muted-foreground">You’ve both carried the same share of the costs.</p>
-          </div>
-        </div>
-      )}
+      <p className="text-sm text-muted-foreground">Pliffo balance</p>
+      <p className="num mt-1 text-4xl font-semibold tracking-tight">{money(net)}</p>
+      <p className="num mt-1 text-sm text-muted-foreground">
+        {money(data.summary.in)} received − {money(data.summary.out)} spent
+      </p>
 
-      <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-4 border-t pt-5 sm:grid-cols-4">
-        {PEOPLE.map((p) => {
-          const owed = per[p].owed;
-          const label = Math.round(owed) > 0 ? `Pliffo owes ${p}` : Math.round(owed) < 0 ? `${p} holds` : `${p}`;
-          return <Stat key={p} label={label} value={Math.round(owed) ? money(Math.abs(owed)) : "Even"} />;
-        })}
-        <Stat label="Income" value={money(data.summary.in)} />
-        <Stat label="Spent" value={money(data.summary.out)} />
-      </dl>
-      <p className="mt-4 flex items-start gap-1.5 text-xs text-muted-foreground">
+      <table className="mt-5 w-full border-t text-[15px]">
+        <caption className="sr-only">Out of pocket per person</caption>
+        <thead>
+          <tr>
+            <th className="pt-4 pb-2 text-left align-bottom text-xs font-normal text-muted-foreground">Who</th>
+            <th className={cn(th, "pt-4")} title="Expenses paid for Pliffo, plus money sent to the other person">
+              Paid for Pliffo
+            </th>
+            <th className={cn(th, "pt-4")} title="Pliffo income sitting with you (like the casino promo), plus money received from the other person">
+              Pliffo money held
+            </th>
+            <th className={cn(th, "pt-4 text-foreground")}>Out of pocket</th>
+          </tr>
+        </thead>
+        <tbody>
+          {PEOPLE.map((p) => (
+            <tr key={p}>
+              <th scope="row" className="py-1.5 text-left font-normal">
+                {p}
+              </th>
+              <td className={cn(td, "text-muted-foreground")}>{money(per[p].out + per[p].sent)}</td>
+              <td className={cn(td, "text-muted-foreground")}>{money(per[p].in + per[p].received)}</td>
+              <td className={cn(td, "font-semibold")}>{money(per[p].owed)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-muted px-4 py-3">
+        {settle ? (
+          <>
+            <div>
+              <p className="font-medium">
+                {settle.from} pays {settle.to} <span className="num">{money(settle.cents)}</span>
+              </p>
+              <p className="num text-sm text-muted-foreground">
+                Then you’re each {share >= 0 ? `out ${money(share)}` : `up ${money(-share)}`}, an even split.
+              </p>
+            </div>
+            <Button onClick={onSettle}>Settle up</Button>
+          </>
+        ) : (
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="size-5 text-positive" />
+            <p className="num font-medium">
+              Even: you’re each {share >= 0 ? `out ${money(share)}` : `up ${money(-share)}`}
+            </p>
+          </div>
+        )}
+      </div>
+      <p className="mt-3 flex items-start gap-1.5 text-xs text-muted-foreground">
         <Info className="mt-px size-3.5 shrink-0" />
-        “Pliffo owes” is what each of you has paid for the company, minus company money you hold. It’s paid back once Pliffo has its own account.
+        Out of pocket = paid for Pliffo − Pliffo money you hold. It’s what Pliffo owes you back once it has its own bank account; a minus means you still hold some of Pliffo’s money.
       </p>
     </section>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <dt className="truncate text-xs text-muted-foreground">{label}</dt>
-      <dd className="num mt-0.5 text-[17px] font-medium tracking-tight">{value}</dd>
-    </div>
   );
 }
 
@@ -302,6 +323,7 @@ function Activity({ data, onOpen, onAdd }: { data: Data; onOpen: (e: Row) => voi
                       <p
                         className={cn(
                           "num text-[15px] font-medium",
+                          e.kind === "out" && "text-negative",
                           e.kind === "in" && "text-positive",
                           e.kind === "transfer" && "text-muted-foreground",
                         )}

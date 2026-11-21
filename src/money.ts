@@ -72,16 +72,18 @@ export function parseCategory(body: unknown): Category | string {
 
 /**
  * Totals in cents. "Both" is split 50/50, so a person's share can end in half a cent.
- * owed = what the company owes that person: paid out − income they hold + transfers sent − received.
+ * owed = out of pocket, i.e. what the company owes that person: paid out − income they hold + transfers sent − received.
  * settle = who pays whom so you two have carried the same amount (half the difference of owed).
  */
 export function summarize(entries: Pick<Entry, "kind" | "amount_cents" | "who" | "to_who">[]) {
-  const per = Object.fromEntries(PEOPLE.map((p) => [p, { in: 0, out: 0, owed: 0 }]));
+  const per = Object.fromEntries(PEOPLE.map((p) => [p, { in: 0, out: 0, sent: 0, received: 0, owed: 0 }]));
   let totalIn = 0;
   let totalOut = 0;
   for (const e of entries) {
     if (e.kind === "transfer") {
+      per[e.who].sent += e.amount_cents;
       per[e.who].owed += e.amount_cents;
+      per[e.to_who!].received += e.amount_cents;
       per[e.to_who!].owed -= e.amount_cents;
       continue;
     }

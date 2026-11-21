@@ -51,7 +51,10 @@ test("summarize matches the spreadsheet (-42.88), owed per person, and who settl
     in: 18500,
     out: 22788,
     net: -4288,
-    per: { Antoine: { in: 9250, out: 15073, owed: 5823 }, Kiryl: { in: 9250, out: 7715, owed: -1535 } },
+    per: {
+      Antoine: { in: 9250, out: 15073, sent: 0, received: 0, owed: 5823 },
+      Kiryl: { in: 9250, out: 7715, sent: 0, received: 0, owed: -1535 },
+    },
     settle: { from: "Kiryl", to: "Antoine", cents: 3679 },
   });
 });
@@ -61,6 +64,8 @@ test("settling up evens both views and leaves totals alone", () => {
   expect(s.settle).toBeNull();
   expect(s.per.Antoine.owed).toBe(2144);
   expect(s.per.Kiryl.owed).toBe(2144);
+  expect(s.per.Kiryl.sent).toBe(3679);
+  expect(s.per.Antoine.received).toBe(3679);
   expect(s.net).toBe(-4288);
 });
 
