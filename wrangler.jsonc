@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pliffo-finances",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  // One address, so one Google redirect URI to register.
+  "routes": [{ "pattern": "finances.pliffo.com", "custom_domain": true }],
+  "workers_dev": false,
+  // The page (built by Vite from index.html + app/) holds no data; it calls /api, which needs a login.
+  // Keep localhost in request URLs under `wrangler dev`, so local Google login redirects back here.
+  "dev": { "host": "localhost:8787" },
+  "vars": {
+    // Google Cloud → APIs & Services → Credentials → OAuth client ID. Public, not a secret.
+    // Secrets (wrangler secret put): GOOGLE_CLIENT_SECRET, SESSION_SECRET, ALLOWED_EMAILS.
+    "GOOGLE_CLIENT_ID": "228095559560-4f6o2k468q13tsvdcodpp84bgt6a7gun.apps.googleusercontent.com"
+  },
+  "d1_databases": [{ "binding": "DB", "database_name": "pliffo-finances", "database_id": "209c3183-149e-4f36-935a-f092df5d2062" }],
+  // Receipts (photos/PDFs). Create once: bunx wrangler r2 bucket create pliffo-receipts
+  "r2_buckets": [{ "binding": "RECEIPTS", "bucket_name": "pliffo-receipts" }]
+}
