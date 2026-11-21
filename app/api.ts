@@ -19,7 +19,7 @@ export async function api(path: string, init: Omit<RequestInit, "body"> & { json
   });
   if (res.status === 401) {
     location.assign("/login");
-    throw new Error("Signed out");
+    return new Promise<never>(() => {}); // keep the loading state up while the browser leaves
   }
   if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? `Request failed (${res.status})`);
   return res;
