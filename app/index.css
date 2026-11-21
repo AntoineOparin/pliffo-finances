@@ -91,6 +91,15 @@
     @apply bg-background text-foreground font-sans antialiased;
     font-feature-settings: "tnum" 0;
   }
+  /* Tailwind resets buttons to the default arrow; anything clickable gets the hand. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href],
+  summary,
+  select:not(:disabled),
+  input[type="file"]:not(:disabled) {
+    cursor: pointer;
+  }
   .num {
     font-variant-numeric: tabular-nums;
   }
